@@ -4,10 +4,4 @@
 # up again.  This script gets executed directly, so it could be python, php,
 # ruby, etc.
 
-if [[ ! -f $OPENSHIFT_DATA_DIR/db_imported ]]
-then
-    pushd $OPENSHIFT_REPO_DIR/php/schema
-    export PGPASSWORD=$OPENSHIFT_POSTGRESQL_DB_PASSWORD
-    psql -h $OPENSHIFT_POSTGRESQL_DB_HOST -d $OPENSHIFT_GEAR_NAME -p $OPENSHIFT_POSTGRESQL_DB_PORT  < ttrss_schema_pgsql.sql && touch $OPENSHIFT_DATA_DIR/db_imported
-fi
 
