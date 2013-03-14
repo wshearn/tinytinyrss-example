@@ -25,7 +25,7 @@ Add MongoDB support to your application
 Add this upstream Etherpad repo
 
     cd etherpad
-    git remote add upstream -m master https://github.com/wshearn/tinytinyrss-openshift-quickstart.git
+    git remote add upstream -m master git://github.com/wshearn/tinytinyrss-example.git
     git pull -s recursive -X theirs upstream master
 
 Then push the repo upstream
