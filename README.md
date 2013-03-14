@@ -18,11 +18,11 @@ you want)
 
     rhc app create -a tinytiny -t php-5.3
 
-Add MongoDB support to your application
+Add PostgreSQL support to your application
 
     rhc cartridge add -a tinytiny -c postgresql-8.4
 
-Add this upstream Etherpad repo
+Add this upstream TinyTiny RSS repo
 
     cd etherpad
     git remote add upstream -m master git://github.com/wshearn/tinytinyrss-example.git
