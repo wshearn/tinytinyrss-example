@@ -6,7 +6,7 @@
 
 if [[ ! -f $OPENSHIFT_DATA_DIR/db_imported ]]
 then
-    psql << ${OPENSHIFT_REPO_DIR}/php/schema/ttrss_schema_pgsql.sql
+    psql << $OPENSHIFT_REPO_DIR/php/schema/ttrss_schema_pgsql.sql
     touch $OPENSHIFT_DATA_DIR/db_imported
 fi
 
