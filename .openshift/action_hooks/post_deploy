@@ -6,6 +6,7 @@
 if [[ ! -f $OPENSHIFT_DATA_DIR/db_imported ]]
 then
     pushd $OPENSHIFT_REPO_DIR/php/schema
-    psql -f ttrss_schema_pgsql.sql && touch $OPENSHIFT_DATA_DIR/db_imported
+    export PGPASSWORD=$OPENSHIFT_POSTGRESQL_DB_PASSWORD
+    psql -h $OPENSHIFT_POSTGRESQL_DB_HOST -p $OPENSHIFT_POSTGRESQL_DB_PORT -d $OPENSHIFT_APP_NAME -U $OPENSHIFT_POSTGRESQL_DB_USERNAME -f ttrss_schema_pgsql.sql && touch $OPENSHIFT_DATA_DIR/db_imported
 fi
 
