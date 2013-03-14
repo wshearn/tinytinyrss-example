@@ -1,156 +1,259 @@
-<!doctype html>
-<html lang="en">
+<?php
+	if (!file_exists("config.php")) {
+		print "<b>Fatal Error</b>: You forgot to copy
+		<b>config.php-dist</b> to <b>config.php</b> and edit it.\n";
+		exit;
+	}
+
+	set_include_path(dirname(__FILE__) ."/include" . PATH_SEPARATOR .
+		get_include_path());
+
+	require_once "sessions.php";
+	require_once "functions.php";
+	require_once "sanity_check.php";
+	require_once "version.php";
+	require_once "config.php";
+	require_once "db-prefs.php";
+	require_once "lib/Mobile_Detect.php";
+
+	$mobile = new Mobile_Detect();
+
+	$link = db_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+
+	if (!init_connection($link)) return;
+
+	global $pluginhost;
+
+	if (!$_REQUEST['mobile']) {
+		if ($mobile->isTablet() && $pluginhost->get_plugin("digest")) {
+			header('Location: backend.php?op=digest');
+			exit;
+		} else if ($mobile->isMobile()) {
+			header('Location: mobile/index.php');
+			exit;
+		}
+	}
+
+
+	login_sequence($link);
+
+	$dt_add = time();
+
+	no_cache_incantation();
+
+	header('Content-Type: text/html; charset=utf-8');
+
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Welcome to OpenShift</title>
-  <style>
-  html { 
-  background: black; 
-  }
-  body {
-    background: #333;
-    background: -webkit-linear-gradient(top, black, #666);
-    background: -o-linear-gradient(top, black, #666);
-    background: -moz-linear-gradient(top, black, #666);
-    background: linear-gradient(top, black, #666);
-    color: white;
-    font-family: "Helvetica Neue",Helvetica,"Liberation Sans",Arial,sans-serif;
-    width: 40em;
-    margin: 0 auto;
-    padding: 3em;
-  }
-  a {
-    color: white;
-  }
+	<title>Tiny Tiny RSS</title>
+	<link rel="stylesheet" type="text/css" href="lib/dijit/themes/claro/claro.css"/>
+	<link rel="stylesheet" type="text/css" href="tt-rss.css?<?php echo $dt_add ?>"/>
+	<link rel="stylesheet" type="text/css" href="cdm.css?<?php echo $dt_add ?>"/>
 
-  h1 {
-    text-transform: capitalize;
-    -moz-text-shadow: -1px -1px 0 black;
-    -webkit-text-shadow: 2px 2px 2px black;
-    text-shadow: -1px -1px 0 black;
-    box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.5);
-    background: #CC0000;
-    width: 22.5em;
-    margin: 1em -2em;
-    padding: .3em 0 .3em 1.5em;
-    position: relative;
-  }
-  h1:before {
-    content: '';
-    width: 0;
-    height: 0;
-    border: .5em solid #91010B;
-    border-left-color: transparent;
-    border-bottom-color: transparent;
-    position: absolute;
-    bottom: -1em;
-    left: 0;
-    z-index: -1000;
-  }
-  h1:after {
-    content: '';
-    width: 0;
-    height: 0;
-    border: .5em solid #91010B;
-    border-right-color: transparent;
-    border-bottom-color: transparent;
-    position: absolute;
-    bottom: -1em;
-    right: 0;
-    z-index: -1000;
-  }
-  h2 { 
-    margin: 2em 0 .5em;
-    border-bottom: 1px solid #999;
-  }
+	<?php print_user_stylesheet($link) ?>
 
-  pre {
-    background: black;
-    padding: 1em 0 0;
-    -webkit-border-radius: 1em;
-    -moz-border-radius: 1em;
-    border-radius: 1em;
-    color: #9cf;
-  }
+	<script type="text/javascript">
+	</script>
 
-  ul { 
-    margin: 0; 
-    padding: 0;
-  }
-  li {
-    list-style-type: none;
-    padding: .5em 0;
-  }
+	<link rel="shortcut icon" type="image/png" href="images/favicon.png"/>
 
-  .brand {
-    display: block;
-    text-decoration: none;
-  }
-  .brand .brand-image {
-    float: left;
-    border: none;
-  }
-  .brand .brand-text {
-    float: left;
-    font-size: 24px;
-    line-height: 24px;
-    padding: 4px 0;
-    color: white;
-    text-transform: uppercase;
-  }
-  .brand:hover,
-  .brand:active {
-    text-decoration: underline;
-  }
+	<script type="text/javascript" src="lib/prototype.js"></script>
+	<script type="text/javascript" src="lib/scriptaculous/scriptaculous.js?load=effects,dragdrop,controls"></script>
+	<script type="text/javascript" src="lib/dojo/dojo.js"></script>
+	<script type="text/javascript" src="lib/dijit/dijit.js"></script>
+	<script type="text/javascript" src="lib/dojo/tt-rss-layer.js"></script>
 
-  .brand:before,
-  .brand:after {
-    content: ' ';
-    display: table;
-  }
-  .brand:after {
-    clear: both;
-  }
-  </style>
+	<script type="text/javascript" charset="utf-8" src="localized_js.php?<?php echo $dt_add ?>"></script>
+	<script type="text/javascript" charset="utf-8" src="errors.php?mode=js"></script>
+
+	<script type="text/javascript">
+	<?php
+		require 'lib/jsmin.php';
+
+		global $pluginhost;
+
+		foreach ($pluginhost->get_plugins() as $n => $p) {
+			if (method_exists($p, "get_js")) {
+				echo JSMin::minify($p->get_js());
+			}
+		}
+
+		foreach (array("tt-rss", "functions", "feedlist", "viewfeed", "FeedTree") as $js) {
+			if (!isset($_GET['debug'])) {
+				echo JSMin::minify(file_get_contents("js/$js.js"));
+			} else {
+				echo file_get_contents("js/$js.js");
+			}
+		}
+	?>
+	</script>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+	<script type="text/javascript">
+		Event.observe(window, 'load', function() {
+			init();
+		});
+	</script>
 </head>
-<body>
-  <a href="http://openshift.com" class="brand">
-    <img class="brand-image"
-      alt="OpenShift logo"
-      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAgCAYAAABU1PscAAAAAXNSR0IArs4c6QAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAARHgAAER4B27UUrQAABUhJREFUWMPFWFlsVGUU/s5/70zbaSltA7RQpJ2lC9CFkQkWIgSJxkAhRA0JCYFq4hPG6JsoGKNCtPigxqhvGlPAuGIaE4igNaElbIW2yNL2tkOtTYGWCqWF2e79fCh7p1Bmpnge/3vuOef7z/nPJiTxMHS6pMRuu6YqFNTTAJYSyAU4GZB0AH2AGCANAfc5Qrba6T3HrmECScYLwCioSIcV2AjidQDZ45Q/LJRaWrLV03X89P8GwHB5XwG4DcDkGPWEBKimNrzN094efGQAzjm9GWHFr4R4LiHKgFaSL3r8zYcmHEBbkW+KFo7UEyhKsNeHlMgyV8eJo4kQpqId9ub6HCoc+XWcxl8lcBTATwDax8GfZtHa054/f/bNg8ZcnyOhHjBc834E8MJ9/vML8aYZQX1hd1PP3WFXkhMRfYkIlpOoGomc0WRRTnch+XAQWG2KTNJNLbuy68C/cQMwXOWrAKkdgz8A8kMdg9X5fn/gQcI7POXLaMk3AGbe/P8SbF0D1KcGRGXpIJJpIQkWBHhnsf/Ie3GF0DmnMxmQT8bg7RellXr8ze+Ox3gAcBvNf+iUUhH5FODLSvScAerDGpiVxTAyGUYKzICA34nCwbhDyHB7N4L8PAofhVzh9jfvjffR/ZZTnupIsR8G0C9EjW7Tfnii/dBgrPL0u83kmjHy33Z3Z/zG97uKi7xpWA8GHZpE1mcZRne8MvXblfbxqQAWR+Fp+mdW5hZPjAqu5JVlhrTwOgrXi2ABbjjchF4FYGvi0qhprgagjYod4OeldXWRWBUEtdBjEH4mwIJ7vF2V4Dqgot0+NEFdPAqmdZ5tAXA8Slx6LrpKsxMHQJge5ft1v0oe2OOu+PZ39+LCOFqImqiXo8JzAeBkXlnmnoKK9LgACJl2R9gELsHW1saUwKCpnbIoa8UMTokVgGXJmSjHkfNWUlWDy9d6USVdyoiEF8b1iElxQKHuPG1D/bCtVEBhCiykMQQFgCK2mN2sSx+tkdcbhGq7wKSkK9RnmsCG2xVSLsflAR1S6eloWhawtF8yGJGskSJDBdQR8pIjZMXcfFmm1gOg2lRaSRdT1AD1PBPQbCAyxcRMifCpc41HEtILNbh9s8SSvYTUmBp2LDGOdCOB1OD0XbeByWliwY5bugc9nU2T4wqhCx7PNAV9bSGwARp3TzVaP0j09GQUzJubLUgefY3SEHMh63MVr4FIlYL+7C1AlCwAmxM+/plYy6hhgN2xp1HBawAr72krnH3uoicTaXyHx7uIwKZoT0QhUhszAAI7x7ivL0a60/jp77yyTFrWt6N6rxE99c7OkxdiBhC2y/cAorXHpama/aNG8dkOO32b6p3zTzXmeysfPu4LkkKafA3IrGjfCfPtuGfiPlfx+xBsuWtwpa3zIuy2YaoZ5o0eSQc5TVnb53aeeAuk9eBtRvkqUH0MoTsqA7nL429eFzeA3lyfQ08eaiNgCrjTYNozQ1S+WyUfQCosTLqZ+oiDUNwhggPujpZTuCMXGwUV6cJgKYnNIJffR3df2NLLZ5871puQrUR//pzpU7rOnAfJP53eDELrsoPpk4RIGRn5xqIBAAdBOCAoBjBjPJsJUdZSt9HSOGFrld5cn2M4KbwfkIUJzqYhQlYWdJ7YN2FrFQCY3nPsmk61AuSuRNYyUdaiRBk/7tViR37Zcir1JYC8WNshgjWWPfhq0dmzVx/5bhQAWnLKU1Md8gZHOsjxAgmD2GEKq4s6m1sxASQPu16HiBh53goqPg9ac0TEcwNQEOBlQAZEcMgC94dDZt2c7r8GMIH0H43ZRDC51RVCAAAAAElFTkSuQmCC">
-    <div class="brand-text"><strong>Open</strong>Shift</div>
-  </a>
-  <h1>
-    Welcome to OpenShift
-  </h1>
-  <p>
-    Place your application here
-  </p>
-  <p>
-    In order to commit to your new project, go to your projects git repo (created with the rhc app create command).  Make your changes, then run:
-  </p>
-  <pre>
-    git commit -a -m 'Some commit message'
-    git push
-  </pre>
-  <p>
-    Then reload this page.
-  </p>
-  
-  <h2>
-    What's next?
-  </h2>
-  <ul>
-    <li>
-      Why not visit us at <a href="http://openshift.redhat.com">http://openshift.redhat.com</a>, or
-    </li>
-    <li>
-      You could get help in the <a href="http://www.redhat.com/openshift">OpenShift forums</a>, or
-    </li>
-    <li>
-      You're welcome to come chat with us in our IRC channel at #openshift on freenode.net
-    </li>
-  </ul>
+
+<body id="ttrssMain" class="claro">
+
+<div id="overlay" style="display : block">
+	<div id="overlay_inner">
+		<div class="insensitive"><?php echo __("Loading, please wait...") ?></div>
+		<div dojoType="dijit.ProgressBar" places="0" style="width : 300px" id="loading_bar"
+	     progress="0" maximum="100">
+		</div>
+		<noscript><br/><?php print_error('Javascript is disabled. Please enable it.') ?></noscript>
+	</div>
+</div>
+
+<div id="header">
+	<img id="net-alert" style="display : none"
+		title="<?php echo __("Communication problem with server.") ?>"
+		src="<?php echo theme_image($link, 'images/alert.png') ?>"/>
+
+	<img id="newVersionIcon" style="display:none" onclick="newVersionDlg()"
+		width="13" height="13"
+		src="<?php echo theme_image($link, 'images/new_version.png') ?>"
+		title="<?php echo __('New version of Tiny Tiny RSS is available!') ?>"
+		alt="new_version_icon"/>
+</div>
+
+<div id="notify" class="notify"><span id="notify_body">&nbsp;</span></div>
+<div id="cmdline" style="display : none"></div>
+<div id="auxDlg" style="display : none"></div>
+<div id="headlines-tmp" style="display : none"></div>
+
+<div id="main" dojoType="dijit.layout.BorderContainer">
+
+<div id="feeds-holder" dojoType="dijit.layout.ContentPane" region="leading" style="width : 20%" splitter="true">
+	<div id="feedlistLoading">
+		<img src='images/indicator_tiny.gif'/>
+		<?php echo  __("Loading, please wait..."); ?></div>
+	<div id="feedTree"></div>
+</div>
+
+<div dojoType="dijit.layout.BorderContainer" region="center" id="header-wrap" gutters="false">
+<div dojoType="dijit.layout.BorderContainer" region="center" id="content-wrap">
+
+<div id="toolbar" dojoType="dijit.layout.ContentPane" region="top">
+	<div id="main-toolbar" dojoType="dijit.Toolbar">
+
+		<form id="main_toolbar_form" action="" onsubmit='return false'>
+
+		<button dojoType="dijit.form.Button" id="collapse_feeds_btn"
+			onclick="collapse_feedlist()"
+			title="<?php echo __('Collapse feedlist') ?>" style="display : inline">
+			&lt;&lt;</button>
+
+		<select name="view_mode" title="<?php echo __('Show articles') ?>"
+			onchange="viewModeChanged()"
+			dojoType="dijit.form.Select">
+			<option selected="selected" value="adaptive"><?php echo __('Adaptive') ?></option>
+			<option value="all_articles"><?php echo __('All Articles') ?></option>
+			<option value="marked"><?php echo __('Starred') ?></option>
+			<option value="published"><?php echo __('Published') ?></option>
+			<option value="unread"><?php echo __('Unread') ?></option>
+			<!-- <option value="noscores"><?php echo __('Ignore Scoring') ?></option> -->
+			<option value="updated"><?php echo __('Updated') ?></option>
+		</select>
+
+		<select title="<?php echo __('Sort articles') ?>"
+			onchange="viewModeChanged()"
+			dojoType="dijit.form.Select" name="order_by">
+			<option selected="selected" value="default"><?php echo __('Default') ?></option>
+			<option value="date"><?php echo __('Date') ?></option>
+			<option value="title"><?php echo __('Title') ?></option>
+			<option value="score"><?php echo __('Score') ?></option>
+		</select>
+
+		<button dojoType="dijit.form.Button" name="update"
+			onclick="viewCurrentFeed()">
+			<?php echo __('Update') ?></button>
+
+		<button dojoType="dijit.form.Button"
+			onclick="catchupCurrentFeed()">
+			<?php echo __('Mark as read') ?></button>
+
+		</form>
+
+		<div class="actionChooser">
+
+			<button id="net-alert" dojoType="dijit.form.Button" style="display : none" disabled="true"
+				title="<?php echo __("Communication problem with server.") ?>">
+			<img
+				src="<?php echo theme_image($link, 'images/alert.png') ?>" />
+			</button>
+
+			<button id="newVersionIcon" dojoType="dijit.form.Button" style="display : none">
+			<img onclick="newVersionDlg()"
+				src="<?php echo theme_image($link, 'images/new_version.png') ?>"
+				title="<?php echo __('New version of Tiny Tiny RSS is available!') ?>" />
+			</button>
+
+
+			<div dojoType="dijit.form.DropDownButton">
+				<span><?php echo __('Actions...') ?></span>
+				<div dojoType="dijit.Menu" style="display: none">
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcPrefs')"><?php echo __('Preferences...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcSearch')"><?php echo __('Search...') ?></div>
+					<div dojoType="dijit.MenuItem" disabled="1"><?php echo __('Feed actions:') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcAddFeed')"><?php echo __('Subscribe to feed...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcEditFeed')"><?php echo __('Edit this feed...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcRescoreFeed')"><?php echo __('Rescore feed') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcRemoveFeed')"><?php echo __('Unsubscribe') ?></div>
+					<div dojoType="dijit.MenuItem" disabled="1"><?php echo __('All feeds:') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcCatchupAll')"><?php echo __('Mark as read') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcShowOnlyUnread')"><?php echo __('(Un)hide read feeds') ?></div>
+					<div dojoType="dijit.MenuItem" disabled="1"><?php echo __('Other actions:') ?></div>
+					<?php if ($pluginhost->get_plugin("digest")) { ?>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcDigest')"><?php echo __('Switch to digest...') ?></div>
+					<?php } ?>
+						<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcTagCloud')"><?php echo __('Show tag cloud...') ?></div>
+					<?php if (!get_pref($link, 'COMBINED_DISPLAY_MODE')) { ?>
+							<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcToggleWidescreen')"><?php echo __('Toggle widescreen mode') ?></div>
+					<?php } ?>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcTagSelect')"><?php echo __('Select by tags...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcAddLabel')"><?php echo __('Create label...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcAddFilter')"><?php echo __('Create filter...') ?></div>
+					<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcHKhelp')"><?php echo __('Keyboard shortcuts help') ?></div>
+					<?php if (!$_SESSION["hide_logout"]) { ?>
+						<div dojoType="dijit.MenuItem" onclick="quickMenuGo('qmcLogout')"><?php echo __('Logout') ?></div>
+					<?php } ?>
+				</div>
+			</div>
+		</div>
+	</div> <!-- toolbar -->
+</div> <!-- toolbar pane -->
+
+	<div id="headlines-wrap-inner" dojoType="dijit.layout.BorderContainer" region="center">
+
+		<div id="headlines-toolbar" dojoType="dijit.layout.ContentPane" region="top">
+		</div>
+
+		<div id="headlines-frame" dojoType="dijit.layout.ContentPane"
+				onscroll="headlines_scroll_handler(this)" region="center">
+			<div id="headlinesInnerContainer">
+				<div class="whiteBox"><?php echo __('Loading, please wait...') ?></div>
+			</div>
+		</div>
+
+		<?php if (!get_pref($link, 'COMBINED_DISPLAY_MODE')) { ?>
+		<div id="content-insert" dojoType="dijit.layout.ContentPane" region="bottom"
+			style="height : 50%" splitter="true"></div>
+		<?php } ?>
+
+	</div>
+</div>
+</div>
+</div>
+
+<?php db_close($link); ?>
+
 </body>
 </html>
