@@ -24,7 +24,7 @@ Add PostgreSQL support to your application
 
 Add this upstream TinyTiny RSS repo
 
-    cd etherpad
+    cd tinytiny
     git remote add upstream -m master git://github.com/wshearn/tinytinyrss-example.git
     git pull -s recursive -X theirs upstream master
 
